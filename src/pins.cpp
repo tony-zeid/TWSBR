@@ -1,4 +1,4 @@
-#include "pins.h"
+#include "../include/pins.h"
 
 void setup_pins(){
     // Motors
@@ -8,10 +8,10 @@ void setup_pins(){
     pinMode(mot2B, OUTPUT); // Motor 2, phase B
     
     // Encoders
-    pinMode(enp1A, INPUT);  // Motor 1 encorder, phase A
-    pinMode(enp1B, INPUT);  // Motor 1 encorder, phase B
-    pinMode(enp2A, INPUT);  // Motor 2 encorder, phase A
-    pinMode(enp2B, INPUT);  // Motor 2 encorder, phase B
+    pinMode(enp1A, INPUT);  // Motor 1 encoder, phase A
+    pinMode(enp1B, INPUT);  // Motor 1 encoder, phase B
+    pinMode(enp2A, INPUT);  // Motor 2 encoder, phase A
+    pinMode(enp2B, INPUT);  // Motor 2 encoder, phase B
     
     // Bluetooth
     pinMode(rxPin, INPUT);  // Bluetooth RX

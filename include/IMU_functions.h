@@ -14,6 +14,6 @@
     float *calculate_IMU_error();   // Measure steady-state errors for compensation
 
     // Update IMU measurements, returns RPYT
-    float *read_IMU_data(float *ERRptr);
+    float *read_IMU_data();
 
 #endif

@@ -1,4 +1,4 @@
-#include "bluetooth.h"
+#include "../include/bluetooth.h"
 
 // Control parameters
 static float pos_controls[4] = {0}; // Position
@@ -30,9 +30,9 @@ float *get_hdg_param(){
 }
 
 void read_BTSerial(){
-    // BT Communications
+    // Communicate with remote Bluetooth device
 }   
 
 void update_var(/*string command*/){
-    // Update commands
+    // Update parameters based on Bluetooth command
 }

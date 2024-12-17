@@ -2,24 +2,29 @@
   IMU Functions adapted from tutorial by Dejan Nedelkovski at https://howtomechatronics.com
 */
 
-#include "IMU_functions.h"
+#include "../include/IMU_functions.h"
 
 // Time markers
 float currentTime = 0;
-//float previousTime = 0;      
-//float elapsedTime = 0;
+float previousTime = 0;      
+float elapsedTime = 0;
 
 // Angle measurements
 float GyrAngX = 0;
 float GyrAngY = 0;
-//float AccAngX = 0;
-//float AccAngY = 0;
+float AccAngX = 0;
+float AccAngY = 0;
+
+// Array to pass error values
+// AccErrX, AccErrY, GyrErrX, GyrErrY, GyrErrZ
+static float errors[5] = {0};
+
+// Output array
+// Roll, Pitch, Yaw, Time
+static float RPYT[5] = {0};
 
 // Update IMU measurements, returns RPYT
-float *read_IMU_data(float *ERRptr){
-    // Output array
-    // Roll, Pitch, Yaw, Time
-    static float RPYT[4] = {0};
+float *read_IMU_data(){
     // === Read acceleromter data === //
     Wire.beginTransmission(MPU);
     Wire.write(0x3B); // Start with register 0x3B (ACCEL_XOUT_H)
@@ -30,14 +35,16 @@ float *read_IMU_data(float *ERRptr){
     float AccY = (Wire.read() << 8 | Wire.read()) / 16384.0; // Y-axis value
     float AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0; // Z-axis value
     // Calculating Roll and Pitch from the accelerometer data
-    //AccAngX = ((atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - *ERRptr); // See the calculate_IMU_error()custom function for more details
-    //AccAngY = ((atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - *(ERRptr + 1));
+    float AccAngX = ((atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - errors[0]); 
+    float AccAngY = ((atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - errors[1]);
 
     // === Update timestamps === //
-    float previousTime = currentTime; // Previous time is stored before the actual time read
+    previousTime = currentTime; // Previous time is stored before the actual time read
     currentTime = millis(); // Current time actual time read
-    float elapsedTime = (currentTime - previousTime) / 1000; // Converts back to seconds for calculation
+    elapsedTime = (currentTime - previousTime); // Calculate elapsed time
     RPYT[3] = currentTime;
+    RPYT[4] = elapsedTime;
+    elapsedTime = elapsedTime / 1000; // Converts back to seconds for calculation
 
     // === Read gyroscope data === //
     Wire.beginTransmission(MPU);
@@ -48,17 +55,17 @@ float *read_IMU_data(float *ERRptr){
     float GyrY = (Wire.read() << 8 | Wire.read()) / 131.0;
     float GyrZ = (Wire.read() << 8 | Wire.read()) / 131.0;
     // Correct the outputs with the calculated error values
-    GyrX = GyrX - *(ERRptr + 2);
-    GyrY = GyrY - *(ERRptr + 3);
-    GyrZ = GyrZ - *(ERRptr + 4);
+    GyrX = GyrX - errors[2];
+    GyrY = GyrY - errors[3];
+    GyrZ = GyrZ - errors[4];
     // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
     GyrAngX = GyrAngX + GyrX * elapsedTime; // deg/s * s = deg
     GyrAngY = GyrAngY + GyrY * elapsedTime;
     RPYT[2] =  RPYT[2] + GyrZ * elapsedTime;
 
     // Complementary filter - combine acceleromter and gyro angle values
-    RPYT[0] = 0.96 * GyrAngX + 0.04 * ((atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - *ERRptr);
-    RPYT[1] = 0.96 * GyrAngY + 0.04 * ((atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - *(ERRptr + 1));
+    RPYT[0] = 0.96 * GyrAngX + 0.04 * AccAngX;
+    RPYT[1] = 0.96 * GyrAngY + 0.04 * AccAngY;
 
     // Drift correction suggested in comments. Acts as LPF?!
     //GyrAngX = RPYT[0];
@@ -89,6 +96,8 @@ void configure_IMU_sens(){
     Wire.write(0x1B);                   // Talk to the GYRO_CONFIG register (1B hex)
     Wire.write(0x10);                   // Set the register bits as 00010000 (1000deg/s full scale)
     Wire.endTransmission(true);
+
+    delay(20);
 }
 
 // Measure steady-state errors for compensation
@@ -96,17 +105,6 @@ float  *calculate_IMU_error() {
     // We can call this funtion in the setup section to calculate the accelerometer and gyro data error. 
     // From here we will get the error values used in the above equations printed on the Serial Monitor.
     // Note that we should place the IMU flat in order to get the proper values, so that we then can the correct values
-    /*
-    //Error values
-    float AccErrX = 0;
-    float AccErrY = 0;
-    float GyrErrX = 0;
-    float GyrErrY = 0;
-    float GyrErrZ = 0;
-    */
-    // Array to return error values
-    // AccErrX, AccErrY, GyrErrX, GyrErrY, GyrErrZ
-    static float errors[5] = {0};
 
     // Read accelerometer values 200 times
     for(int i = 0; i < 200; i++){
@@ -122,8 +120,8 @@ float  *calculate_IMU_error() {
         errors[1] = errors[1] + ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
     }
     //Divide the sum by 200 to get the error value
-    errors[0] = errors[0] / 200;
-    errors[1] = errors[1] / 200;
+    errors[0] = errors[0] / 200;    // AccErrX
+    errors[1] = errors[1] / 200;    // AccErrY
 
     // Read gyro values 200 times
     for(int i = 0; i < 200; i++){
@@ -140,9 +138,9 @@ float  *calculate_IMU_error() {
         errors[4] = errors[4] + (GyrZ / 131.0);
     }
     // Divide the sum by 200 to get the error value
-    errors[2] = errors[2] / 200;
-    errors[3] = errors[3] / 200;
-    errors[4] = errors[4] / 200;
+    errors[2] = errors[2] / 200;    // GyrErrX
+    errors[3] = errors[3] / 200;    // GyrErrY
+    errors[4] = errors[4] / 200;    // GyrErrZ
 
     // Returns pointer to start of array
     return errors;

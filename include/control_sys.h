@@ -4,7 +4,8 @@
     #include <Arduino.h>
     
     #include "pins.h"
-
+    #include "messages.h"
+    
     // Individual PID controllers for cascade
     float position_control(float *IMUptr, float *POSptr_param, bool printData);
     float balance_control(float *IMUptr, float *BALpos_param, float POS_out, bool printData);
