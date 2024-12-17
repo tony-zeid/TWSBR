@@ -6,15 +6,16 @@
 // defining SoftwareSerial in multiple locations 
 
 // Toggle debug messages and pause time
-bool debug_on = 0;
+bool debug_on = 1;
 bool BTdebug_on = 0;
 bool msgPause = 1;          
 int pauseTime = 100;
 // Toggle data monitoring
-bool monitor_on = 0;
+bool monitor_on = 1;
 bool BTmonitor_on = 0;
 // Data message speed set in main with dataRate
 
+// Prints messages to serial monitor & Bluetooth
 void print_msg(char message[]){
     if(debug_on == 1){
         Serial.println(message);
@@ -26,6 +27,7 @@ void print_msg(char message[]){
     }
 }
 
+// Prints integer variables to serial monitor & Bluetooth
 void print_int(char variable[], int *VARptr, byte offset){
     if(monitor_on == 1){
         Serial.print(variable); Serial.print(*(VARptr + offset)); Serial.print(",");
@@ -35,6 +37,7 @@ void print_int(char variable[], int *VARptr, byte offset){
     }
 }
 
+// Prints float variables to serial monitor & Bluetooth
 void print_float(char variable[], float *VARptr, byte offset){
     if(monitor_on == 1){
         Serial.print(variable); Serial.print(*(VARptr + offset)); Serial.print(",");

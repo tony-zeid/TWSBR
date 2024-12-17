@@ -1,8 +1,70 @@
 #include "control_sys.h"
 
+// Individual controller outputs
+static float POS_out = 0;     // Position control output
+static float BAL_out = 0;     // Balance control output
+static float HDG_out = 0;     // Headaing control output
+
 // Actuation signal array
 // mot1_spd, mot2_spd, mot1_dir, mot2_dir, mot1_pos, mot2_pos
-static int act_MOT[6] = {0};
+static int MOTptr[6] = {0};
+
+// Motor 1 Interrupts
+void inc1(){
+    int ens1B = digitalRead(enp1B);
+    if(ens1B > 0){
+        MOTptr[4]++;
+    }
+    else{
+        MOTptr[4]--;
+    }
+}
+// Motor 2 Interrupts
+void inc2(){
+    int ens2B = digitalRead(enp2B);
+    if(ens2B > 0){
+        MOTptr[5]--;
+    }
+    else{
+        MOTptr[5]++;
+    }
+}
+
+// PID position controller
+float position_control(float *IMUptr, float *POSptr_param, bool printData){
+
+    return POS_out;
+}
+
+// PID balance controller
+float balance_control(float *IMUptr, float *BALptr_param, float POS_out, bool printData){
+    
+    return BAL_out;
+}
+
+// PID heading controller
+float heading_control(float *IMUptr, float *HDGptr_param, bool printData){
+
+    return HDG_out;
+}
+
+// Combined cascade control system
+int *cascade_control(float *IMUptr, float BAL_out, float HDG_out, bool printData){
+
+    return MOTptr;
+}
+
+
+
+
+
+
+
+
+
+//  Old version - simple PID
+/****************************************************
+
 
 // Variables used in control calcualtions
 float Tlast = 0;
@@ -21,31 +83,32 @@ int maxOUT = 190;
 float mot1_vel = 0;
 float mot2_vel = 0;
 
-int *PID_control(float *RPYTptr, float *CONptr, int printOut){
-    /*
+
+int *PID_control(float *IMUptr, float *CONptr, int printOut){
+    
     // IMU measurements and sample time
-    float roll = *(RPYTptr + 0);
-    float pitch = *(RPYTptr + 1);
-    float yaw = *(RPYTptr + 2);
-    float Ts = *(RPYTptr + 3);
+    //float roll = *(IMUptr + 0);
+    //float pitch = *(IMUptr + 1);
+    //float yaw = *(IMUptr + 2);
+    //float Ts = *(IMUptr + 3);
 
     // Control setpoints and parameters
-    float setAng = *(CONptr + 0);
-    float setPos = *(CONptr + 1);
-    float kP = *(CONptr + 2);
-    float kI = *(CONptr + 3);
-    float kD = *(CONptr + 4);
-    */
+    //float setAng = *(CONptr + 0);
+    //float setPos = *(CONptr + 1);
+    //float kP = *(CONptr + 2);
+    //float kI = *(CONptr + 3);
+    //float kD = *(CONptr + 4);
+    
 
     // Calculate dT and update marker
-    float dT = *(RPYTptr + 3) - Tlast;
-    Tlast = *(RPYTptr + 3);
+    float dT = *(IMUptr + 3) - Tlast;
+    Tlast = *(IMUptr + 3);
     //Serial.print("dT:"); Serial.print(dT); Serial.print(",");
 
     // ================= PID Control System ================= //
 
     // Error = SetAng - Pitch
-    float conERR = *(CONptr + 0) - *(RPYTptr + 1); 
+    float conERR = *(CONptr + 0) - *(IMUptr + 1); 
 
     // Proportional term
     float conPRO = *(CONptr + 2) * conERR;
@@ -61,11 +124,11 @@ int *PID_control(float *RPYTptr, float *CONptr, int printOut){
     }
 
     // Derivative term on measurement with low pass filter     - blows up to infinity!
-    //conDER = ( conDER * (2 * tau - dT) - 2 * (*(CONptr + 4)) * (*(RPYTptr + 1) - prvPitch)) / (2 * tau * dT);
+    //conDER = ( conDER * (2 * tau - dT) - 2 * (*(CONptr + 4)) * (*(IMUptr + 1) - prvPitch)) / (2 * tau * dT);
 
     // Increment previous values
     prvERR = conERR;
-    prvPitch = *(RPYTptr + 1);
+    prvPitch = *(IMUptr + 1);
 
     // Sum for output signal
     float conOUT = conPRO + conINT + conDER;
@@ -122,23 +185,6 @@ int *PID_control(float *RPYTptr, float *CONptr, int printOut){
     return act_MOT;
 }
 
-// Motor 1 Interrupts
-void inc1(){
-    int ens1B = digitalRead(enp1B);
-    if(ens1B > 0){
-        act_MOT[4]++;
-    }
-    else{
-        act_MOT[4]--;
-    }
-}
-// Motor 2 Interrupts
-void inc2(){
-    int ens2B = digitalRead(enp2B);
-    if(ens2B > 0){
-        act_MOT[5]--;
-    }
-    else{
-        act_MOT[5]++;
-    }
-}
+
+
+************************************************************/

@@ -2,22 +2,22 @@
 
 void setup_pins(){
     // Motors
-    pinMode(mot1A, OUTPUT); 
-    pinMode(mot1B, OUTPUT);
-    pinMode(mot2A, OUTPUT);
-    pinMode(mot2B, OUTPUT);
+    pinMode(mot1A, OUTPUT); // Motor 1, phase A
+    pinMode(mot1B, OUTPUT); // Motor 1, phase B
+    pinMode(mot2A, OUTPUT); // Motor 2, phase A
+    pinMode(mot2B, OUTPUT); // Motor 2, phase B
     
     // Encoders
-    pinMode(enp1A, INPUT);   
-    pinMode(enp1B, INPUT);
-    pinMode(enp2A, INPUT);
-    pinMode(enp2B, INPUT);
+    pinMode(enp1A, INPUT);  // Motor 1 encorder, phase A
+    pinMode(enp1B, INPUT);  // Motor 1 encorder, phase B
+    pinMode(enp2A, INPUT);  // Motor 2 encorder, phase A
+    pinMode(enp2B, INPUT);  // Motor 2 encorder, phase B
     
     // Bluetooth
-    pinMode(rxPin, INPUT);   
-    pinMode(txPin, OUTPUT); 
+    pinMode(rxPin, INPUT);  // Bluetooth RX
+    pinMode(txPin, OUTPUT); // Bluetooth TX
 
     // Interrupts
-    attachInterrupt(digitalPinToInterrupt(enp1A), inc1, RISING);
-    attachInterrupt(digitalPinToInterrupt(enp2A), inc2, RISING);
+    attachInterrupt(digitalPinToInterrupt(enp1A), inc1, RISING);    // Motor 1 encoder
+    attachInterrupt(digitalPinToInterrupt(enp2A), inc2, RISING);    // Motor 2 encoder
 }

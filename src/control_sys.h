@@ -5,10 +5,16 @@
     
     #include "pins.h"
 
-    int *PID_control(float *IMUptr, float *CONptr, int printOut);
+    // Individual PID controllers for cascade
+    float position_control(float *IMUptr, float *POSptr_param, bool printData);
+    float balance_control(float *IMUptr, float *BALpos_param, float POS_out, bool printData);
+    float heading_control(float *IMUptr, float *HDGptr_param, bool printData);
 
-    void inc1();
+    // Runs PID cascade control system
+    int *cascade_control(float *IMUptr, float BAL_out, float HDG_out, bool printData);
 
-    void inc2();
+    // Inrements motor position upon interrupt
+    void inc1();    // Motor 1
+    void inc2();    // Motor 2
     
 #endif

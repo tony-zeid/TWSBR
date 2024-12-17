@@ -5,15 +5,15 @@
     #include <Wire.h>
     #include <math.h>
 
-    // MPU Address 
+    // MPU6050 I2C Address 
     #define     MPU         0x68
 
-    void initialise_IMU();
+    // Initialisation routines
+    void initialise_IMU();          // Initialise I2C comms and reset IMU 
+    void configure_IMU_sens();      // Configures sensitivity of Accel and Gyro
+    float *calculate_IMU_error();   // Measure steady-state errors for compensation
 
-    void configure_IMU_sens();
-
-    float *calculate_IMU_error();
-
+    // Update IMU measurements, returns RPYT
     float *read_IMU_data(float *ERRptr);
 
 #endif

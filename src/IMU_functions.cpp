@@ -15,6 +15,7 @@ float GyrAngY = 0;
 //float AccAngX = 0;
 //float AccAngY = 0;
 
+// Update IMU measurements, returns RPYT
 float *read_IMU_data(float *ERRptr){
     // Output array
     // Roll, Pitch, Yaw, Time
@@ -66,6 +67,7 @@ float *read_IMU_data(float *ERRptr){
     return RPYT;
 }
 
+// Initialise I2C comms and reset IMU 
 void initialise_IMU(){
     Wire.begin();                      // Initialize comunication
     Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
@@ -74,6 +76,7 @@ void initialise_IMU(){
     Wire.endTransmission(true);        // End the transmission
 }
 
+// Configures sensitivity of Accel and Gyro
 void configure_IMU_sens(){
     // Configure Accelerometer Sensitivity - Full Scale Range (default +/- 2g)
     Wire.beginTransmission(MPU);
@@ -88,6 +91,7 @@ void configure_IMU_sens(){
     Wire.endTransmission(true);
 }
 
+// Measure steady-state errors for compensation
 float  *calculate_IMU_error() {  
     // We can call this funtion in the setup section to calculate the accelerometer and gyro data error. 
     // From here we will get the error values used in the above equations printed on the Serial Monitor.

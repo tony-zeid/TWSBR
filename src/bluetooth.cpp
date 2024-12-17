@@ -1,20 +1,37 @@
 #include "bluetooth.h"
 
 // Control parameters
-static float controls[5] = {0};
+static float pos_controls[4] = {0}; // Position
+static float bal_controls[4] = {0}; // Balance
+static float hdg_controls[4] = {0}; // Heading
 
-float *get_param(){
-    controls[0] = 0; // Setpoint Angle
-    controls[1] = 0; // Setpoint Poisiton           // Reserved for PID cascade, consider Yaw / steering?
-    controls[2] = 40; // Proportional Gain kP
-    controls[3] = 0.01; // Integral Gain kI
-    controls[4] = 0.001; // Derivative Gain kD
-    return controls;
+float *get_pos_param(){
+    pos_controls[0] = 0;    // Setpoint Position
+    pos_controls[1] = 1;    // Proportional Gain kP
+    pos_controls[2] = 0;    // Integral Gain kI
+    pos_controls[3] = 0;    // Derivative Gain kD
+    return pos_controls;
+}
+
+float *get_bal_param(){
+    bal_controls[0] = 0;    // Setpoint Pitch
+    bal_controls[1] = 1;    // Proportional Gain kP
+    bal_controls[2] = 0;    // Integral Gain kI
+    bal_controls[3] = 0;    // Derivative Gain kD
+    return bal_controls;
+}
+
+float *get_hdg_param(){
+    hdg_controls[0] = 0;    // Setpoint Heading
+    hdg_controls[1] = 1;    // Proportional Gain kP
+    hdg_controls[2] = 0;    // Integral Gain kI
+    hdg_controls[3] = 0;    // Derivative Gain kD
+    return hdg_controls;
 }
 
 void read_BTSerial(){
     // BT Communications
-}
+}   
 
 void update_var(/*string command*/){
     // Update commands

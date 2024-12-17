@@ -6,6 +6,7 @@
     #include "pins.h"
     #include "messages.h"
 
+    // Sets motor direction & PWM duty cycle
     void run_motors(int *MOTptr);
 
 #endif

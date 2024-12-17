@@ -8,8 +8,10 @@
 
     #include "pins.h"
 
-    float *get_param();
     // Passes control parameters only
+    float *get_pos_param();
+    float *get_bal_param();
+    float *get_hdg_param();
 
     void read_BTSerial();
     // Communicates with remote device
