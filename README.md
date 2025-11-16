@@ -1,7 +1,7 @@
 # Self-Balancing Robot Project
 
 ## Overview
-This project is a self-balancing robot using an Arduino Uno, featuring motor control, an IMU sensor, and PID-based control.
+This project is a self-balancing robot using an Arduino Uno, featuring PID-based motor control, an IMU sensor, and bluetooth communications
 
 ## Installation
 1. Clone the repository: `git clone https://github.com/yourusername/self-balancing-robot.git`

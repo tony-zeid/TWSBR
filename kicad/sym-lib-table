@@ -1,0 +1,8 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "DRV8833_module")(type "KiCad")(uri "${KIPRJMOD}/symbols/DRV8833_module.kicad_sym")(options "")(descr ""))
+  (lib (name "MPU6050_module")(type "KiCad")(uri "${KIPRJMOD}/symbols/MPU6050_module.kicad_sym")(options "")(descr ""))
+  (lib (name "MP1584_module")(type "KiCad")(uri "${KIPRJMOD}/symbols/MP1584_module.kicad_sym")(options "")(descr ""))
+  (lib (name "HC-05_module")(type "KiCad")(uri "${KIPRJMOD}/symbols/HC-05_module.kicad_sym")(options "")(descr ""))
+  (lib (name "JGA25-371_motor")(type "KiCad")(uri "${KIPRJMOD}/symbols/JGA25-371_motor.kicad_sym")(options "")(descr ""))
+)
