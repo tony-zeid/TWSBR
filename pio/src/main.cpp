@@ -40,6 +40,7 @@ float *ERRptr;
 void setup() {
     // Setup I/O pin modes and interrupts
     setup_pins();
+    //test_motors();    // Uncomment to test (run mode 0 only!)
 
     // Initialise serial and Bluetooth communications
     Serial.begin(19200);        // 19200 required for MPU6050

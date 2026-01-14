@@ -33,8 +33,8 @@ float *IMU_read_data(){
     float AccY = (Wire.read() << 8 | Wire.read()) / 16384.0; // Y-axis value
     float AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0; // Z-axis value
     // Calculating Roll and Pitch from the accelerometer data
-    float AccAngX = ((atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - errors[0]); 
-    float AccAngY = ((atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - errors[1]);
+    AccAngX = ((atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - errors[0]); 
+    AccAngY = ((atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - errors[1]);
 
     // === Update timestamps === //
     float currentTime = millis(); // Current time actual time read
@@ -69,12 +69,22 @@ float *IMU_read_data(){
     //GyrAngX = RPYT[0];
     //GyrAngY = RPYT[1];
 
+    // === Bounds checking for sensor validity === //
+    // Pitch and Roll should stay within ±90 degrees (physically reasonable)
+    if(RPYT[0] > 90.0f) RPYT[0] = 90.0f;    // Roll
+    if(RPYT[0] < -90.0f) RPYT[0] = -90.0f;
+    if(RPYT[1] > 90.0f) RPYT[1] = 90.0f;    // Pitch
+    if(RPYT[1] < -90.0f) RPYT[1] = -90.0f;
+    // Yaw can wrap around, but clamp to ±180 degrees for detection
+    if(RPYT[2] > 180.0f) RPYT[2] = 180.0f;
+    if(RPYT[2] < -180.0f) RPYT[2] = -180.0f;
+
     return RPYT;
 }
 
 // Initialise I2C comms and reset IMU 
 void IMU_initialise(){
-    Wire.begin();                      // Initialize comunication
+    Wire.begin();                      // Initialise communication
     Wire.beginTransmission(IMU_addr);  // Start communication with MPU6050 (0x68)
     Wire.write(IMU_reset);             // Talk to the reset register (0x6B)
     Wire.write(0x00);                  // Make reset - place a 0 into the reset register

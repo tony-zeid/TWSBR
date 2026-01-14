@@ -8,4 +8,7 @@
     // Sets motor direction & PWM duty cycle
     void run_motors(int *MOTptr);
 
+    // Test function for motor diagnostics - spins each motor independently
+    void test_motors();
+
 #endif

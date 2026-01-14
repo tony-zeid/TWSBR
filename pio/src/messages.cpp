@@ -9,7 +9,7 @@ bool msgs_on = 1;
 bool BTmsgs_on = 0;
 
 // Prints messages to serial monitor & Bluetooth
-void print_msg(char message[]){
+void print_msg(const char message[]){
     if(msgs_on == 1){
         Serial.println(message);
     }
@@ -19,7 +19,7 @@ void print_msg(char message[]){
 }
 
 // Prints integer variables to serial monitor & Bluetooth
-void print_int(char variable[], int *VARptr, byte offset){
+void print_int(const char variable[], int *VARptr, byte offset){
     if(msgs_on == 1){
         Serial.print(variable); 
         Serial.print(VARptr[offset]);
@@ -33,7 +33,7 @@ void print_int(char variable[], int *VARptr, byte offset){
 }
 
 // Prints float variables to serial monitor & Bluetooth
-void print_float(char variable[], float *VARptr, byte offset){
+void print_float(const char variable[], float *VARptr, byte offset){
     if(msgs_on == 1){
         Serial.print(variable); 
         Serial.print(VARptr[offset]); 
