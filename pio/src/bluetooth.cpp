@@ -7,7 +7,8 @@
 SoftwareSerial BTSerial(BT_RX_PIN, BT_TX_PIN);
 
 namespace {
-String btInputString = "";
+char btInputString[64];  // Fixed char array instead of String (saves ~64 bytes)
+uint8_t btInputIdx = 0;
 bool btStringComplete = false;
 }
 
@@ -20,19 +21,20 @@ void initBtSerial(){
 void readBtSerial(){
     while (BTSerial.available()){
         char ch = (char)BTSerial.read();
-        if (ch == '\n') {
-            btStringComplete = true;
+        if (ch == '\n' || ch == '\r') {
+            if (btInputIdx > 0){
+                btInputString[btInputIdx] = '\0';  // Null terminate
+                btStringComplete = true;
+            }
             break;
-        } else {
-            btInputString += ch;
+        } else if (btInputIdx < 63) {
+            btInputString[btInputIdx++] = ch;
         }
     }
 
     if (btStringComplete){
-        btInputString.trim();
-        handleCommandLine(btInputString);
-
-        btInputString = "";
+        handleCommandLine(String(btInputString));  // Convert char array to String for parsing
+        btInputIdx = 0;
         btStringComplete = false;
     }
 }   

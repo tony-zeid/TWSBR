@@ -3,13 +3,14 @@
 #include "../include/control_sys.h"
 #include <EEPROM.h>
 
-// runMode is defined in main.cpp
-extern uint8_t runMode;
-extern uint8_t debugMode;
+// modeBits and related externs defined in main.cpp
+extern uint8_t modeBits;
 extern uint16_t dataRatePerMode[2];
+extern float *errPtr;  // Pointer to IMU error array
 
 namespace {
-String serialInput;
+char serialInput[64];  // Fixed char array instead of String (saves ~64 bytes)
+uint8_t serialInputIdx = 0;
 bool serialLineComplete = false;
 
 // Persistent, editable control parameter arrays
@@ -55,7 +56,7 @@ void setParam(float *arr, int index, const String &arg, const char *label){
 }
 
 void commandInit(){
-    serialInput.reserve(128);
+    // No initialization needed for char array
 }
 
 void handleCommandLine(const String &line){
@@ -84,7 +85,8 @@ void handleCommandLine(const String &line){
             printMsg("Mode must be 0..2");
             return;
         }
-        runMode = (uint8_t)m;
+        modeBits = (modeBits & 0xFC) | (m & 0x03);  // Update runMode bits
+        saveParametersToEEPROM();
         printMsg("Mode updated");
         return;
     }
@@ -100,7 +102,8 @@ void handleCommandLine(const String &line){
             printMsg("Debug must be 0 or 1");
             return;
         }
-        debugMode = (uint8_t)d;
+        modeBits = (modeBits & 0xFB) | ((d & 0x01) << 2);  // Update debugMode bit
+        saveParametersToEEPROM();
         printMsg("Debug mode updated");
         return;
     }
@@ -116,7 +119,9 @@ void handleCommandLine(const String &line){
             printMsg("Rate must be positive");
             return;
         }
-        dataRatePerMode[debugMode] = (uint16_t)r;
+        uint8_t dm = (modeBits >> 2) & 0x01;  // Extract debugMode from modeBits
+        dataRatePerMode[dm] = (uint16_t)r;
+        saveParametersToEEPROM();
         printMsg("Data rate updated");
         return;
     }
@@ -145,16 +150,19 @@ void handleCommandLine(const String &line){
 void processSerialCommands(){
     while (Serial.available()){
         char ch = (char)Serial.read();
-        if (ch == '\n'){
-            serialLineComplete = true;
+        if (ch == '\n' || ch == '\r'){
+            if (serialInputIdx > 0){
+                serialInput[serialInputIdx] = '\0';  // Null terminate
+                serialLineComplete = true;
+            }
             break;
-        } else {
-            serialInput += ch;
+        } else if (serialInputIdx < 63) {
+            serialInput[serialInputIdx++] = ch;
         }
     }
     if (serialLineComplete){
-        handleCommandLine(serialInput);
-        serialInput = "";
+        handleCommandLine(String(serialInput));  // Convert char array to String for parsing
+        serialInputIdx = 0;
         serialLineComplete = false;
     }
 }
@@ -170,9 +178,8 @@ float *getHdgParam(){ return hdgControls; }
 void saveParametersToEEPROM(){
     uint16_t addr = EEPROM_START_ADDR;
     
-    // Save runMode and debugMode
-    EEPROM.write(addr++, runMode);
-    EEPROM.write(addr++, debugMode);
+    // Save modeBits (packed runMode, debugMode, printData)
+    EEPROM.write(addr++, modeBits);
     
     // Save dataRatePerMode[2]
     for (int i = 0; i < 2; i++){
@@ -197,13 +204,14 @@ void saveParametersToEEPROM(){
 void loadParametersFromEEPROM(){
     uint16_t addr = EEPROM_START_ADDR;
     
-    // Load runMode and debugMode
-    runMode = EEPROM.read(addr++);
-    debugMode = EEPROM.read(addr++);
+    // Load modeBits (packed runMode, debugMode, printData)
+    modeBits = EEPROM.read(addr++);
     
-    // Validate runMode and debugMode
-    if (runMode > 2) runMode = 2;
-    if (debugMode > 1) debugMode = 1;
+    // Validate modeBits (runMode must be 0-2, debugMode must be 0-1)
+    uint8_t rm = modeBits & 0x03;
+    uint8_t dm = (modeBits >> 2) & 0x01;
+    if (rm > 2) modeBits = (modeBits & 0xFC) | 2;  // Set runMode to 2
+    if (dm > 1) modeBits = (modeBits & 0xFB) | 0;  // Set debugMode to 0
     
     // Load dataRatePerMode[2]
     for (int i = 0; i < 2; i++){

@@ -12,11 +12,6 @@ static int motMeas[2] = {0};
 
 /***************************************************************/
 
-// Individual controller outputs
-static float posOut = 0;     // Position control output
-static float balOut = 0;     // Balance control output
-static float hdgOut = 0;     // Heading control output
-
 // Actuation signal array
 // mot1_spd, mot2_spd, mot1_dir, mot2_dir
 static int motAct[4] = {0};
@@ -43,6 +38,8 @@ float positionControl(float *imuPtr, float *posParamPtr, bool printData){
     // IMUptr: roll, pitch, yaw, timestamp, elapsed_time (milliseconds)
     // POSptr_param: setPos, posKP, posKI, posKD
     
+    // Controller outputs (local variables, not static)
+    
     float dt = imuPtr[4] / 1000.0f;  // Convert ms to seconds
     if(dt <= 0) dt = 0.001f;          // Prevent division by zero
     
@@ -68,8 +65,8 @@ float positionControl(float *imuPtr, float *posParamPtr, bool printData){
     if(dt > 0) pos_D = Kd * (pos_error - pos_error_prev) / dt;
     pos_error_prev = pos_error;
     
-    // Sum all terms
-    posOut = pos_P + pos_I + pos_D;
+    // Sum all terms and return
+    float posOut = pos_P + pos_I + pos_D;
     
     return posOut;
 }
@@ -107,8 +104,8 @@ float balanceControl(float *imuPtr, float *balParamPtr, float posOut, bool print
     float bal_D = Kd * (bal_error - bal_error_prev) / dt;
     bal_error_prev = bal_error;
     
-    // Sum all terms
-    balOut = bal_P + bal_I + bal_D;
+    // Sum all terms and return
+    float balOut = bal_P + bal_I + bal_D;
     
     return balOut;
 }
@@ -143,8 +140,8 @@ float headingControl(float *imuPtr, float *hdgParamPtr, bool printData){
     float hdg_D = Kd * (hdg_error - hdg_error_prev) / dt;
     hdg_error_prev = hdg_error;
     
-    // Sum all terms
-    hdgOut = hdg_P + hdg_I + hdg_D;
+    // Sum all terms and return
+    float hdgOut = hdg_P + hdg_I + hdg_D;
     
     return hdgOut;
 }
@@ -251,4 +248,9 @@ void inc2(){
     else{
         motMeas[1]--;
     }
+}
+
+// Get current encoder positions
+int *getMotorPositions(){
+    return motMeas;
 }

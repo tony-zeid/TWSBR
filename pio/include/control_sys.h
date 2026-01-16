@@ -44,4 +44,7 @@
     void inc1();    // Motor 1
     void inc2();    // Motor 2
     
+    // Get current encoder positions
+    int *getMotorPositions();
+    
 #endif

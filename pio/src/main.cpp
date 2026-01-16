@@ -20,22 +20,22 @@
 #include "../include/bluetooth.h"      // Bluetooth I/O
 #include "../include/command.h"        // Command handling & parameters
 
-// Set running mode
-uint8_t runMode = 2;
-// 0 - Measure only
-// 1 - Run controller
-// 2 - Drive motors
-
-// Debug/print mode
-uint8_t debugMode = 1;
-// 0 - Compact: roll, pitch, yaw only (space-separated)
-// 1 - Verbose: all telemetry and diagnostics
+// Packed mode bits (saves 2 bytes vs separate uint8_t variables)
+// Bits 0-1: runMode (0-2)
+// Bit 2: debugMode (0-1)
+// Bit 3: printData (0-1)
+uint8_t modeBits = 0x02;  // runMode=2, debugMode=0, printData=0
+#define runMode       ((modeBits) & 0x03)
+#define setRunMode(m) (modeBits = (modeBits & 0xFC) | ((m) & 0x03))
+#define debugMode     (((modeBits) >> 2) & 0x01)
+#define setDebugMode(d) (modeBits = (modeBits & 0xFB) | (((d) & 0x01) << 2))
+#define printData     (((modeBits) >> 3) & 0x01)
+#define setPrintData(p) (modeBits = (modeBits & 0xF7) | (((p) & 0x01) << 3))
 
 // Program counter and data output rates per debug mode
 int loopCount = 0;    // Increments on each loop
 uint16_t dataRatePerMode[2] = {10, 500};  // dataRatePerMode[debugMode]
 #define dataRate (dataRatePerMode[debugMode])
-uint8_t printData = 0;
 
 // Pointer to IMU error array
 float *errPtr;              
@@ -54,6 +54,9 @@ void setup() {
     printMsg("");
     printMsg("[INIT] Serial");
 
+    // Load saved parameters from EEPROM
+    loadParametersFromEEPROM();
+
     initBtSerial();
     
     // Initialise I2C comms and reset IMU 
@@ -65,20 +68,10 @@ void setup() {
     delay(20);                                                      // Delay for stability (min 20ms)
     printMsg("[INIT] IMU Scale");
 
-    // Measure steady-state errors for compensation
-    errPtr = imuCalculateError();
-    printMsg("[INIT] IMU Config");
-
-    // Print error values to serial monitor and Bluetooth
-    if(1){
-        printMsg("[INFO] IMU Errors");
-        printFloat("AccErrX:", errPtr, 0);
-        printFloat("AccErrY:", errPtr, 1);
-        printFloat("GyrErrX:", errPtr, 2);
-        printFloat("GyrErrY:", errPtr, 3);
-        printFloat("GyrErrZ:", errPtr, 4);
-        printMsg("");
-    }
+    // NOTE: Calibration now done via 'cal' or 'cal_inv' commands, not on boot
+    // This saves RAM and allows choosing normal or upside-down calibration
+    printMsg("[INIT] IMU Ready");
+    printMsg("[INFO] Use 'cal' or 'cal_inv' command to calibrate");
 
     // End-of-setup message
     printMsg("==================================================");
@@ -89,12 +82,16 @@ void setup() {
 // Main Control Cycle
 void loop() {
     // Determines whether to print this cycle
-    printData = (loopCount % dataRate == 0);
+    if (loopCount % dataRate == 0) {
+        modeBits |= 0x08;  // Set printData bit
+    } else {
+        modeBits &= 0xF7;  // Clear printData bit
+    }
 
     // Process Bluetooth commands if any
     readBtSerial();
 
-    if(runMode == 0 || runMode == 1 || runMode == 2){   
+    if((modeBits & 0x03) == 0 || (modeBits & 0x03) == 1 || (modeBits & 0x03) == 2) {   
         // Get current control parameters
         float *posParamPtr = getPosParam();    // Position
         float *balParamPtr = getBalParam();    // Balance
@@ -103,14 +100,34 @@ void loop() {
         // Update IMU measurements, returns RPYT
         float *imuPtr = imuReadData();                                                            // Read IMU 
 
-        // Compact mode: print only Roll, Pitch, Yaw (space-separated)
+        // Compute control outputs for both compact and verbose modes
+        float posOut = 0, balOut = 0, hdgOut = 0;
+        int *motorActuationPtr = nullptr;
+        
+        if(runMode == 1 || runMode == 2){
+            posOut = positionControl(imuPtr, posParamPtr, false);
+            balOut = balanceControl(imuPtr, balParamPtr, posOut, false);
+            hdgOut = headingControl(imuPtr, hdgParamPtr, false);
+            motorActuationPtr = cascadeControl(imuPtr, balOut, hdgOut, false);
+        }
+
+        // Compact mode: print Roll, Pitch, Yaw, M1_speed, M2_speed, Enc1_pos, Enc2_pos (space-separated)
         if(debugMode == 0){
             if(printData){
-                Serial.print(imuPtr[0]);
+                int *encPos = getMotorPositions();
+                Serial.print(imuPtr[0]);    // Roll
                 Serial.print(" ");
-                Serial.print(imuPtr[1]);
+                Serial.print(imuPtr[1]);    // Pitch
                 Serial.print(" ");
-                Serial.println(imuPtr[2]);
+                Serial.print(imuPtr[2]);    // Yaw
+                Serial.print(" ");
+                Serial.print(motorActuationPtr ? motorActuationPtr[0] : 0);  // M1 speed
+                Serial.print(" ");
+                Serial.print(motorActuationPtr ? motorActuationPtr[1] : 0);  // M2 speed
+                Serial.print(" ");
+                Serial.print(encPos[0]);  // Encoder 1 position
+                Serial.print(" ");
+                Serial.println(encPos[1]);  // Encoder 2 position
             }
         }
         // Verbose mode: print full diagnostics
@@ -154,9 +171,10 @@ void loop() {
 
         // Send RPYT to controller for motor drive signal (verbose debug mode)                                      
         if((runMode == 1 || runMode == 2) && debugMode == 1){
-            float posOut = positionControl(imuPtr, posParamPtr, printData);                      // P/B/H controllers    
-            float balOut = balanceControl(imuPtr, balParamPtr, posOut, printData);
-            float hdgOut = headingControl(imuPtr, hdgParamPtr, printData);
+            // Re-compute with verbose printing enabled for verbose mode
+            posOut = positionControl(imuPtr, posParamPtr, printData);                      // P/B/H controllers    
+            balOut = balanceControl(imuPtr, balParamPtr, posOut, printData);
+            hdgOut = headingControl(imuPtr, hdgParamPtr, printData);
 
             if(printData){
                 printMsg("[INFO] Control signals");
@@ -166,7 +184,7 @@ void loop() {
                 printMsg("");
             }     
 
-            int *motorActuationPtr = cascadeControl(imuPtr, balOut, hdgOut, printData);                 // Cascade controller
+            motorActuationPtr = cascadeControl(imuPtr, balOut, hdgOut, printData);                 // Cascade controller
 
             // Print actuation signal values to serial monitor and Bluetooth
             if(printData){
