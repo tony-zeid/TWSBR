@@ -182,26 +182,108 @@ Edit `include/IMU_functions.h` to change sensor ranges:
 
 Divisors update automatically when you change these values.
 
+## PID Tuning Guide (Ziegler-Nichols Method)
+
+### Prerequisites
+Before tuning:
+1. Ensure hardware is verified (encoders working, motors correct direction)
+2. Calibrate IMU using `cal` or `cal_inv` command
+3. Lift wheels off ground for initial testing
+
+### Step 1: Find Critical Gain (Proportional Only)
+Start with pure proportional control:
+```
+balkp 1.0
+balki 0.0
+balkd 0.0
+debug 0
+rate 10
+mode 2
+```
+
+Gradually increase `balkp` by 0.5 until the robot oscillates **steadily** (constant amplitude):
+- Too low: Robot falls immediately
+- Critical gain (`Kp_crit`): Sustained oscillations without growing or decaying
+- Too high: Violent oscillations that grow rapidly
+
+**Record:**
+- `Kp_crit` = value where oscillations are steady
+- `T_osc` = period between peaks (count cycles, multiply by sample time)
+
+### Step 2: Calculate PID Gains
+Using Ziegler-Nichols PID formula:
+```
+Kp = 0.6 × Kp_crit
+Ki = 1.2 × Kp_crit / T_osc
+Kd = 0.075 × Kp_crit × T_osc
+```
+
+**Example:**
+If `Kp_crit = 5.0` and `T_osc = 0.5s`:
+```
+balkp 3.0    # 0.6 × 5.0
+balki 12.0   # 1.2 × 5.0 / 0.5
+balkd 0.19   # 0.075 × 5.0 × 0.5
+```
+
+### Step 3: Fine-Tune
+Apply calculated gains and observe:
+- **Too much overshoot (>20°)?** Reduce `balkp` by 10-20%
+- **Steady-state error (drifts)?** Increase `balki` slightly (by ~0.02)
+- **High-frequency oscillations/chatter?** Increase `balkd` for damping
+- **Sluggish response?** Increase `balkp` by 10%
+
+### Recommended Starting Points
+If you want to skip the calculation:
+```
+balkp 2.5    # Moderate response
+balki 0.1    # Prevents drift
+balkd 0.05   # Light damping
+```
+
+Then tune by feel:
+- Increase `balkp` until it responds quickly but doesn't overshoot badly
+- Add `balki` only if robot drifts slowly when balanced
+- Increase `balkd` if robot oscillates after disturbance
+
+### Quick Test Commands
+```
+# Test step response
+balset 2.0   # Lean forward 2°, should recover smoothly
+
+# Test disturbance rejection
+# Gently push robot, should return to vertical in < 0.5s
+
+# Monitor performance
+debug 1
+rate 1       # Print every cycle for detailed analysis
+```
+
 ## Code Conventions
 - Functions/variables: lowerCamelCase (e.g. `runMode`, `setupPins`, `balanceControl`)
 - Constants/macros: UPPER_SNAKE_CASE (e.g. `MOT1_A`, `IMU_GYRO_DATA`)
 - Types: PascalCase
 
-## Safety Notes
-- Lift the wheels off the ground during first tests.
-- Ensure power rails are stable; brown‑outs can cause runaway behaviour.
-- The motor driver outputs are clamped to 0–255 PWM; direction pins clear before switching for safety.
+## Safety Features
+- **Safety Cutoff:** Motors automatically cut if tilt exceeds ±45° (prevents damage during pickup or falls)
+- **Motor Clamping:** PWM outputs clamped to 0–255
+- **Direction Safety:** Direction pins clear before switching to prevent shoot-through
+- **Encoder Deadband:** ±2 tick deadband prevents noise-induced motor chatter
+
+**Testing Safety:**
+- Lift wheels off ground during initial tests
+- Ensure power rails are stable; brown‑outs can cause runaway behaviour
+- Use foam padding when testing autonomous balance
 
 ## Memory Usage and Optimization Notes
 
-**Current RAM Usage: ~86% (1762/2048 bytes)**
+**Current RAM Usage: ~88% (1808/2048 bytes)**
 
 The Arduino Uno has only 2KB of RAM, and this project uses:
 - **~450 bytes**: Arduino libraries (Serial, Wire/I²C, SoftwareSerial)
 - **~200 bytes**: Global variables (control arrays, IMU state, motor state)
-- **~100-150 bytes**: EEPROM library internal buffers
 - **~1000 bytes**: Arduino core overhead (timers, interrupts, system buffers)
-- **~286 bytes free**: Available for stack during runtime
+- **~240 bytes free**: Available for stack during runtime
 
 ### Recent Optimizations
 Several RAM optimizations have been applied to reduce memory pressure:
@@ -209,8 +291,9 @@ Several RAM optimizations have been applied to reduce memory pressure:
 1. **String → char array conversion**: Replaced `String` objects with fixed-size `char[64]` buffers for serial/Bluetooth input (~60-80 bytes saved)
 2. **Bit-packed mode flags**: Packed `runMode`, `debugMode`, and `printData` into a single byte using bit fields (2 bytes saved)
 3. **Local variables for controller outputs**: Changed `posOut`, `balOut`, `hdgOut` from static globals to local variables (12 bytes saved)
+4. **Direct AVR EEPROM access**: Replaced Arduino EEPROM library with `<avr/eeprom.h>` functions (eliminates library overhead)
 
-**Total RAM savings: ~95 bytes** (from 95.3% → 86.0% usage)
+**Total RAM savings: ~95 bytes** (from 95.3% → 88.7% usage including safety cutoff feature)
 
 ### IMU Configuration
 The IMU full-scale ranges are now configurable at compile-time in `include/IMU_functions.h`:
@@ -219,14 +302,16 @@ The IMU full-scale ranges are now configurable at compile-time in `include/IMU_f
 
 Divisors are automatically calculated based on these settings.
 
-### EEPROM Library Impact
-The Arduino EEPROM library (`#include <EEPROM.h>`) adds significant RAM overhead (~100-150 bytes) for its internal buffering and state management. While convenient for parameter persistence, this contributes to overall RAM usage.
+### EEPROM Implementation
+This project uses direct AVR EEPROM functions (`eeprom_read_byte()` and `eeprom_write_byte()` from `<avr/eeprom.h>`) instead of the Arduino EEPROM library. This approach:
+- Eliminates library RAM overhead
+- Provides explicit control over EEPROM operations
+- Saves ~50-100 bytes compared to the Arduino library
 
-**Future Optimization:**
-If additional features are needed, consider implementing direct EEPROM access using `eeprom_read_byte()` and `eeprom_write_byte()` from `<avr/eeprom.h>` instead of the Arduino EEPROM library. This can save ~50-100 bytes of RAM at the cost of slightly more complex code.
+All parameters (PID gains, modes, IMU calibration) persist across reboots via EEPROM.
 
 **Current Status:**
-With 286 bytes of free stack space, there is adequate headroom for runtime operations. The control loops avoid deep recursion and large local variables, keeping stack usage minimal.
+With 240 bytes of free stack space, there is adequate headroom for runtime operations. The control loops avoid deep recursion and large local variables, keeping stack usage minimal.
 
 ## Tuning the Control Loops
 

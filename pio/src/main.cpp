@@ -98,8 +98,26 @@ void loop() {
         float *hdgParamPtr = getHdgParam();    // Heading                                                             
 
         // Update IMU measurements, returns RPYT
-        float *imuPtr = imuReadData();                                                            // Read IMU 
+        float *imuPtr = imuReadData();
+        
+        // SAFETY CUTOFF: Check tilt angle for safety
+        // If robot tilts beyond safe limits, cut all motor outputs
+        float pitch = imuPtr[1];  // Pitch angle
+        float roll = imuPtr[0];   // Roll angle
+        if (abs(pitch) > TILT_SAFETY_LIMIT || abs(roll) > TILT_SAFETY_LIMIT) {
+            // Robot has fallen or being picked up - stop motors immediately
+            int safeMotors[4] = {0, 0, 0, 0};  // All motors off
+            runMotors(safeMotors);
+            
+            if (printData) {
+                printMsg("[SAFETY CUTOFF] Tilt limit exceeded - motors stopped");
+            }
+            
+            loopCount++;
+            return;  // Skip control loop this cycle
+        }
 
+        // Continue with normal control if within safe limits
         // Compute control outputs for both compact and verbose modes
         float posOut = 0, balOut = 0, hdgOut = 0;
         int *motorActuationPtr = nullptr;

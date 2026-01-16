@@ -28,6 +28,10 @@
     #define HDG_KP      0.0f   // Proportional gain
     #define HDG_KI      0.0f   // Integral gain
     #define HDG_KD      0.0f   // Derivative gain
+    #define HDG_SETPOINT 0.0f  // Desired heading angle (degrees)
+    
+    // SAFETY LIMITS
+    #define TILT_SAFETY_LIMIT 45.0f  // Safety cutoff if pitch/roll exceeds this angle (degrees)
     #define HDG_SETPOINT 0.0f  // Desired heading (degrees)
     
     /***************************************************************/

@@ -1,7 +1,7 @@
 #include "../include/command.h"
 #include "../include/messages.h"
 #include "../include/control_sys.h"
-#include <EEPROM.h>
+#include <avr/eeprom.h>  // Direct AVR EEPROM access (saves ~100 bytes RAM vs Arduino EEPROM library)
 
 // modeBits and related externs defined in main.cpp
 extern uint8_t modeBits;
@@ -179,13 +179,13 @@ void saveParametersToEEPROM(){
     uint16_t addr = EEPROM_START_ADDR;
     
     // Save modeBits (packed runMode, debugMode, printData)
-    EEPROM.write(addr++, modeBits);
+    eeprom_write_byte((uint8_t*)addr++, modeBits);
     
     // Save dataRatePerMode[2]
     for (int i = 0; i < 2; i++){
         uint16_t val = dataRatePerMode[i];
-        EEPROM.write(addr++, (uint8_t)(val & 0xFF));
-        EEPROM.write(addr++, (uint8_t)((val >> 8) & 0xFF));
+        eeprom_write_byte((uint8_t*)addr++, (uint8_t)(val & 0xFF));
+        eeprom_write_byte((uint8_t*)addr++, (uint8_t)((val >> 8) & 0xFF));
     }
     
     // Save parameter arrays (3 arrays × 4 floats each)
@@ -195,7 +195,7 @@ void saveParametersToEEPROM(){
             float fval = arrays[a][i];
             uint8_t *bytes = (uint8_t *)&fval;
             for (int j = 0; j < 4; j++){
-                EEPROM.write(addr++, bytes[j]);
+                eeprom_write_byte((uint8_t*)addr++, bytes[j]);
             }
         }
     }
@@ -205,7 +205,7 @@ void loadParametersFromEEPROM(){
     uint16_t addr = EEPROM_START_ADDR;
     
     // Load modeBits (packed runMode, debugMode, printData)
-    modeBits = EEPROM.read(addr++);
+    modeBits = eeprom_read_byte((uint8_t*)addr++);
     
     // Validate modeBits (runMode must be 0-2, debugMode must be 0-1)
     uint8_t rm = modeBits & 0x03;
@@ -215,8 +215,8 @@ void loadParametersFromEEPROM(){
     
     // Load dataRatePerMode[2]
     for (int i = 0; i < 2; i++){
-        uint8_t lo = EEPROM.read(addr++);
-        uint8_t hi = EEPROM.read(addr++);
+        uint8_t lo = eeprom_read_byte((uint8_t*)addr++);
+        uint8_t hi = eeprom_read_byte((uint8_t*)addr++);
         dataRatePerMode[i] = (uint16_t)(lo | (hi << 8));
     }
     
@@ -226,7 +226,7 @@ void loadParametersFromEEPROM(){
         for (int i = 0; i < 4; i++){
             uint8_t bytes[4];
             for (int j = 0; j < 4; j++){
-                bytes[j] = EEPROM.read(addr++);
+                bytes[j] = eeprom_read_byte((uint8_t*)addr++);
             }
             memcpy(&arrays[a][i], bytes, 4);
         }
