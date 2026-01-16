@@ -1,4 +1,9 @@
 #include "../include/messages.h"
+#include "../include/bluetooth.h"
+#include <SoftwareSerial.h>
+
+// Provided by bluetooth.cpp
+extern SoftwareSerial BTSerial;
 
 // Messages formatted for Arduino serial plotter
 
@@ -8,13 +13,17 @@
 bool messagesOn = 1;
 bool btMessagesOn = 0;
 
+void setBtMessagesEnabled(bool enabled){
+    btMessagesOn = enabled ? 1 : 0;
+}
+
 // Prints messages to serial monitor & Bluetooth
 void printMsg(const char message[]){
     if(messagesOn == 1){
         Serial.println(message);
     }
     if(btMessagesOn == 1){
-        //BTSerial.println(message);
+        BTSerial.println(message);
     }
 }
 
@@ -26,9 +35,9 @@ void printInt(const char variable[], int *varPtr, byte offset){
         Serial.print(",");
     }
     if(btMessagesOn == 1){
-        //BTSerial.print(variable); 
-        //BTSerial.print(varPtr[offset]); 
-        //BTSerial.print(",");
+        BTSerial.print(variable); 
+        BTSerial.print(varPtr[offset]); 
+        BTSerial.print(",");
     }
 }
 
@@ -41,8 +50,8 @@ void printFloat(const char variable[], float *varPtr, byte offset){
     }
     
     if(btMessagesOn == 1){
-        //BTSerial.print(variable); 
-        //BTSerial.print(varPtr[offset]); 
-        //BTSerial.print(",");
+        BTSerial.print(variable); 
+        BTSerial.print(varPtr[offset]); 
+        BTSerial.print(",");
     }
 }

@@ -5,6 +5,9 @@
     #include <SoftwareSerial.h>
     #include "pins.h"
 
+    // Enable/disable Bluetooth mirroring
+    void setBtMessagesEnabled(bool enabled);
+
     // Prints messages to serial monitor & Bluetooth
     void printMsg(const char message[]);
 

@@ -52,7 +52,8 @@ Refer to the constants in include/pins.h if you change wiring.
 ## Project Structure
 - include/
 	- IMU_functions.h — IMU addresses and public IMU API
-	- bluetooth.h — parameter accessors and Bluetooth helpers
+	- bluetooth.h — Bluetooth helpers (initialise/read)
+	- command.h — command handling and parameter getters
 	- control_sys.h — PID gains and control loop APIs
 	- messages.h — serial/Bluetooth printing utilities
 	- motor_driver.h — motor actuation API
@@ -76,13 +77,68 @@ platformio run --target upload # Upload to Arduino Uno
 platformio device monitor -b 19200 # Open serial monitor
 ```
 
-Serial baud is 19200 (required for stable MPU6050 operation in this project).
+Serial baud is 19200 (required for stable MPU6050 operation in this project). Bluetooth baud is 9600 (HC‑05/HC‑06 default).
 
-## Run Modes
-`runMode` in src/main.cpp controls behaviour:
+## Command Interface
+The firmware accepts simple newline‑terminated commands from either the Serial Monitor (19200 baud) or the Bluetooth link (9600 baud). Commands update run mode, debug mode, PID parameters, and telemetry rate at runtime.
+
+### Commands
+- Run mode
+	- `mode 0` — measure only
+	- `mode 1` — run controllers (no motor drive)
+	- `mode 2` — full operation (drive motors)
+- Debug/print mode
+	- `debug 0` — compact output (roll pitch yaw, space‑separated)
+	- `debug 1` — verbose output (all diagnostics and parameters)
+- Telemetry rate
+	- `rate <cycles>` — print every N cycles (applies to current debug mode independently)
+- Position PID
+	- `poskp <value>` — proportional gain
+	- `poski <value>` — integral gain
+	- `poskd <value>` — derivative gain
+	- `posset <value>` — setpoint
+- Balance PID
+	- `balkp <value>` — proportional gain
+	- `balki <value>` — integral gain
+	- `balkd <value>` — derivative gain
+	- `balset <value>` — setpoint
+- Heading PID
+	- `hdgkp <value>` — proportional gain
+	- `hdgki <value>` — integral gain
+	- `hdgkd <value>` — derivative gain
+	- `hdgset <value>` — setpoint
+- Status
+	- `status` — print a simple OK message
+
+### Examples
+```
+# Serial Monitor – verbose with default rate (every 500 cycles):
+debug 1
+mode 2
+balkp 2.0
+
+# Serial Monitor – compact output for tuning (every 10 cycles):
+debug 0
+rate 10
+mode 2
+
+# Bluetooth – switch to verbose, adjust a parameter:
+debug 1
+poskp 0.5
+rate 100
+```
+
+## Run Modes & Debug Modes
+`runMode` controls algorithm behaviour:
 - 0 — Measure only (reads IMU and prints diagnostics)
 - 1 — Run controllers (compute control signals, do not drive motors)
-- 2 — Drive motors (full operation)
+- 2 — Drive motors (full operation with motor control)
+
+`debugMode` controls telemetry output:
+- 0 — **Compact**: prints roll, pitch, yaw only (space‑separated, one per line) – useful for live tuning via terminal or data logging
+- 1 — **Verbose**: prints all parameters, control signals, motor outputs, and diagnostics – useful for development and debugging
+
+Each debug mode has its own independent `dataRate` (cycles per print). Use `rate` command to tune telemetry frequency per mode.
 
 ## Control Parameters
 PID gains live in include/control_sys.h:
