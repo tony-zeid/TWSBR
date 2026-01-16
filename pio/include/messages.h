@@ -6,12 +6,12 @@
     #include "pins.h"
 
     // Prints messages to serial monitor & Bluetooth
-    void print_msg(const char message[]);
+    void printMsg(const char message[]);
 
     // Prints integer variables to serial monitor & Bluetooth
-    void print_int(const char variable[], int *VARptr, byte offset);
+    void printInt(const char variable[], int *varPtr, byte offset);
     
     // Prints float variables to serial monitor & Bluetooth
-    void print_float(const char variable[], float *VARptr, byte offset);
+    void printFloat(const char variable[], float *varPtr, byte offset);
 
 #endif

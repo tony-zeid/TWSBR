@@ -20,165 +20,165 @@
 #include "../include/bluetooth.h"      // Receives parameter updates
 
 // Set running mode
-uint8_t run_mode = 1;
+uint8_t runMode = 2;
 // 0 - Measure only
 // 1 - Run controller
 // 2 - Drive motors
 
 // Program counter and data output rate
-int c = 0;    // Increments on each loop
+int loopCount = 0;    // Increments on each loop
 uint16_t dataRate = 500;   // Prints data every n cycles
 uint8_t printData = 0; // = (c % dataRate == 0);
 
 // Pointer to IMU error array
-float *ERRptr;              
+float *errPtr;              
 
 // Setup Bluetooth serial
-//SoftwareSerial BTSerial(rxPin, txPin);
+//SoftwareSerial BTSerial(BT_RX_PIN, BT_TX_PIN);
 
 // Initialisation routines
 void setup() {
     // Setup I/O pin modes and interrupts
-    setup_pins();
+    setupPins();
     //test_motors();    // Uncomment to test (run mode 0 only!)
 
     // Initialise serial and Bluetooth communications
     Serial.begin(19200);        // 19200 required for MPU6050
-    print_msg("");
-    print_msg("[INIT] Serial");
+    printMsg("");
+    printMsg("[INIT] Serial");
 
     //BTSerial.begin(9600);     // 9600 required for HC-05 
-    //print_msg("[INIT] Bluetooth");
+    //printMsg("[INIT] Bluetooth");
     
     // Initialise I2C comms and reset IMU 
-    IMU_initialise();
-    print_msg("[INIT] IMU Start");
+    imuInitialise();
+    printMsg("[INIT] IMU Start");
 
     // Configures sensitivity of Accel and Gyro
-    IMU_sens_config();
+    imuConfigSensitivity();
     delay(20);                                                      // Delay for stability (min 20ms)
-    print_msg("[INIT] IMU Scale");
+    printMsg("[INIT] IMU Scale");
 
     // Measure steady-state errors for compensation
-    ERRptr = IMU_error_calc();
-    print_msg("[INIT] IMU Config");
+    errPtr = imuCalculateError();
+    printMsg("[INIT] IMU Config");
 
     // Print error values to serial monitor and Bluetooth
     if(1){
-        print_msg("[INFO] IMU Errors");
-        print_float("AccErrX:", ERRptr, 0);
-        print_float("AccErrY:", ERRptr, 1);
-        print_float("GyrErrX:", ERRptr, 2);
-        print_float("GyrErrY:", ERRptr, 3);
-        print_float("GyrErrZ:", ERRptr, 4);
-        print_msg("");
+        printMsg("[INFO] IMU Errors");
+        printFloat("AccErrX:", errPtr, 0);
+        printFloat("AccErrY:", errPtr, 1);
+        printFloat("GyrErrX:", errPtr, 2);
+        printFloat("GyrErrY:", errPtr, 3);
+        printFloat("GyrErrZ:", errPtr, 4);
+        printMsg("");
     }
 
     // End-of-setup message
-    print_msg("==================================================");
-    print_msg("[STATUS] Robot Ready");
+    printMsg("==================================================");
+    printMsg("[STATUS] Robot Ready");
     delay(50);                                                      // Delay for stability (min 20ms)
 }
 
 // Main Control Cycle
 void loop() {
     // Determines whether to print this cycle
-    printData = (c % dataRate == 0);
+    printData = (loopCount % dataRate == 0);
 
     // Print count and time
     if(printData){
-        print_msg("==================================================");
-        print_int("Count:", &c, 0);
-        int timenow = millis();
-        print_int("Time:", &timenow, 0);   
-        print_msg("");
+        printMsg("==================================================");
+        printInt("Count:", &loopCount, 0);
+        int timeNow = millis();
+        printInt("Time:", &timeNow, 0);   
+        printMsg("");
     }
 
-    if(run_mode == 0 || run_mode == 1 || run_mode == 2){   
+    if(runMode == 0 || runMode == 1 || runMode == 2){   
         // Receive control parameters (Bluetooth)
-        float *POSptr_param = get_pos_param();    // Position                                       // Read parameters
-        float *BALptr_param = get_bal_param();    // Balance
-        float *HDGptr_param = get_hdg_param();    // Heading                                                             
+        float *posParamPtr = getPosParam();    // Position                                       // Read parameters
+        float *balParamPtr = getBalParam();    // Balance
+        float *hdgParamPtr = getHdgParam();    // Heading                                                             
 
         // Print control parameters to serial monitor and Bluetooth
         if(printData){
-            print_msg("[INFO] Control parameters");
+            printMsg("[INFO] Control parameters");
             // Position control parameters
-            print_float("SetPos:", POSptr_param, 0); 
-            print_float("PosKP:", POSptr_param, 1);
-            print_float("PosKI:", POSptr_param, 2);
-            print_float("PosKD:", POSptr_param, 3);
-            print_msg("");
+            printFloat("SetPos:", posParamPtr, 0); 
+            printFloat("PosKP:", posParamPtr, 1);
+            printFloat("PosKI:", posParamPtr, 2);
+            printFloat("PosKD:", posParamPtr, 3);
+            printMsg("");
             // Balance control parameters
-            print_float("SetBal:", BALptr_param, 0);        
-            print_float("BalKP:", BALptr_param, 1);
-            print_float("BalKI:", BALptr_param, 2);
-            print_float("BalKD:", BALptr_param, 3);
-            print_msg("");
+            printFloat("SetBal:", balParamPtr, 0);        
+            printFloat("BalKP:", balParamPtr, 1);
+            printFloat("BalKI:", balParamPtr, 2);
+            printFloat("BalKD:", balParamPtr, 3);
+            printMsg("");
             // Heading control parameters
-            print_float("SetHdg:", HDGptr_param, 0);       
-            print_float("HdgKP:", HDGptr_param, 1);
-            print_float("HdgKI:", HDGptr_param, 2);
-            print_float("HdgKD:", HDGptr_param, 3);
-            print_msg("");
+            printFloat("SetHdg:", hdgParamPtr, 0);       
+            printFloat("HdgKP:", hdgParamPtr, 1);
+            printFloat("HdgKI:", hdgParamPtr, 2);
+            printFloat("HdgKD:", hdgParamPtr, 3);
+            printMsg("");
         }
 
         // Update IMU measurements, returns RPYT
-        float *IMUptr = IMU_read_data();                                                            // Read IMU 
+        float *imuPtr = imuReadData();                                                            // Read IMU 
 
         // Print RPYT values to serial monitor and Bluetooth
         if(printData){
-            print_msg("[INFO] IMU measurements");       
+            printMsg("[INFO] IMU measurements");       
             // IMU measurement data
-            print_float("Time:", IMUptr, 3);   
-            print_float("Tdif:", IMUptr, 4);
-            print_msg("");
-            print_float("Roll:", IMUptr, 0);                
-            print_float("Pitch:", IMUptr, 1);
-            print_float("Yaw:", IMUptr, 2);
-            print_msg("");
+            printFloat("Time:", imuPtr, 3);   
+            printFloat("Tdif:", imuPtr, 4);
+            printMsg("");
+            printFloat("Roll:", imuPtr, 0);                
+            printFloat("Pitch:", imuPtr, 1);
+            printFloat("Yaw:", imuPtr, 2);
+            printMsg("");
         }
 
         // Send RPYT to controller for motor drive signal                                      
-        if(run_mode == 1 || run_mode == 2){
-            float POS_out = position_control(IMUptr, POSptr_param, printData);                      // P/B/H contrrollers    
-            float BAL_out = balance_control(IMUptr, BALptr_param, POS_out, printData);
-            float HDG_out = heading_control(IMUptr, HDGptr_param, printData);
+        if(runMode == 1 || runMode == 2){
+            float posOut = positionControl(imuPtr, posParamPtr, printData);                      // P/B/H controllers    
+            float balOut = balanceControl(imuPtr, balParamPtr, posOut, printData);
+            float hdgOut = headingControl(imuPtr, hdgParamPtr, printData);
 
             if(printData){
-                print_msg("[INFO] Control signals");
-                print_float("POScon:", &POS_out, 0);          // Position control output
-                print_float("BALcon:", &BAL_out, 0);          // Balance control output
-                print_float("HDGcon:", &HDG_out, 0);          // Heading control output
-                print_msg("");
+                printMsg("[INFO] Control signals");
+                printFloat("POScon:", &posOut, 0);          // Position control output
+                printFloat("BALcon:", &balOut, 0);          // Balance control output
+                printFloat("HDGcon:", &hdgOut, 0);          // Heading control output
+                printMsg("");
             }     
 
-            int *MOTptr_act = cascade_control(IMUptr, BAL_out, HDG_out, printData);                 // Cascade controller
+            int *motorActuationPtr = cascadeControl(imuPtr, balOut, hdgOut, printData);                 // Cascade controller
 
             // Print actuation signal values to serial monitor and Bluetooth
             if(printData){
-                print_msg("[INFO] Motor output");
-                print_int("M1Spd:", MOTptr_act, 0);     
-                print_int("M1Dir:", MOTptr_act, 2);        
-                print_msg("");
-                print_int("M2Spd:", MOTptr_act, 1);
-                print_int("M2Dir:", MOTptr_act, 3);
-                print_msg("");
+                printMsg("[INFO] Motor output");
+                printInt("M1Spd:", motorActuationPtr, 0);     
+                printInt("M1Dir:", motorActuationPtr, 2);        
+                printMsg("");
+                printInt("M2Spd:", motorActuationPtr, 1);
+                printInt("M2Dir:", motorActuationPtr, 3);
+                printMsg("");
             }     
             
             // Send actuation signal to motors
-            if(run_mode == 2){
-                run_motors(MOTptr_act);                                                             // Run Motors
-                if(printData) print_msg("[STATUS] Motors running");
+            if(runMode == 2){
+                runMotors(motorActuationPtr);                                                             // Run Motors
+                if(printData) printMsg("[STATUS] Motors running");
             }
         }
     }
 
     // Message for run mode error
-    else if (run_mode != 0 && run_mode != 1 && run_mode != 2){
-        if(printData) print_msg("[ERROR] Invalid run mode");
+    else if (runMode != 0 && runMode != 1 && runMode != 2){
+        if(printData) printMsg("[ERROR] Invalid run mode");
     }
 
     // Increment program counter
-    ++c;
+    ++loopCount;
 }

@@ -33,12 +33,12 @@
     /***************************************************************/
     
     // Individual PID controllers for cascade
-    float position_control(float *IMUptr, float *POSptr_param, bool printData);
-    float balance_control(float *IMUptr, float *BALpos_param, float POS_out, bool printData);
-    float heading_control(float *IMUptr, float *HDGptr_param, bool printData);
+    float positionControl(float *imuPtr, float *posParamPtr, bool printData);
+    float balanceControl(float *imuPtr, float *balParamPtr, float posOut, bool printData);
+    float headingControl(float *imuPtr, float *hdgParamPtr, bool printData);
 
     // Runs PID cascade control system
-    int *cascade_control(float *IMUptr, float BAL_out, float HDG_out, bool printData);
+    int *cascadeControl(float *imuPtr, float balOut, float hdgOut, bool printData);
 
     // Inrements motor position upon interrupt
     void inc1();    // Motor 1

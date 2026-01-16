@@ -8,15 +8,15 @@
     #include "pins.h"
 
     // Passes control parameters only
-    float *get_pos_param();
-    float *get_bal_param();
-    float *get_hdg_param();
+    float *getPosParam();
+    float *getBalParam();
+    float *getHdgParam();
 
-    void read_BTSerial();
+    void readBtSerial();
     // Communicates with remote device
-    // Calls update_var() passing command
+    // Calls updateVar() passing command
 
-    void update_var();
+    void updateVar();
     // Interprets command and updates variable
 
 #endif

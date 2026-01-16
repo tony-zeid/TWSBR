@@ -2,38 +2,38 @@
 #include "../include/control_sys.h"
 
 // Control parameters
-static float pos_controls[4] = {0}; // Position
-static float bal_controls[4] = {0}; // Balance
-static float hdg_controls[4] = {0}; // Heading
+static float posControls[4] = {0}; // Position
+static float balControls[4] = {0}; // Balance
+static float hdgControls[4] = {0}; // Heading
 
-float *get_pos_param(){
-    pos_controls[0] = POS_SETPOINT;  // Setpoint Position
-    pos_controls[1] = POS_KP;        // Proportional Gain kP
-    pos_controls[2] = POS_KI;        // Integral Gain kI
-    pos_controls[3] = POS_KD;        // Derivative Gain kD
-    return pos_controls;
+float *getPosParam(){
+    posControls[0] = POS_SETPOINT;  // Setpoint Position
+    posControls[1] = POS_KP;        // Proportional Gain kP
+    posControls[2] = POS_KI;        // Integral Gain kI
+    posControls[3] = POS_KD;        // Derivative Gain kD
+    return posControls;
 }
 
-float *get_bal_param(){
-    bal_controls[0] = BAL_SETPOINT;  // Setpoint Pitch
-    bal_controls[1] = BAL_KP;        // Proportional Gain kP
-    bal_controls[2] = BAL_KI;        // Integral Gain kI
-    bal_controls[3] = BAL_KD;        // Derivative Gain kD
-    return bal_controls;
+float *getBalParam(){
+    balControls[0] = BAL_SETPOINT;  // Setpoint Pitch
+    balControls[1] = BAL_KP;        // Proportional Gain kP
+    balControls[2] = BAL_KI;        // Integral Gain kI
+    balControls[3] = BAL_KD;        // Derivative Gain kD
+    return balControls;
 }
 
-float *get_hdg_param(){
-    hdg_controls[0] = HDG_SETPOINT;  // Setpoint Heading
-    hdg_controls[1] = HDG_KP;        // Proportional Gain kP
-    hdg_controls[2] = HDG_KI;        // Integral Gain kI
-    hdg_controls[3] = HDG_KD;        // Derivative Gain kD
-    return hdg_controls;
+float *getHdgParam(){
+    hdgControls[0] = HDG_SETPOINT;  // Setpoint Heading
+    hdgControls[1] = HDG_KP;        // Proportional Gain kP
+    hdgControls[2] = HDG_KI;        // Integral Gain kI
+    hdgControls[3] = HDG_KD;        // Derivative Gain kD
+    return hdgControls;
 }
 
-void read_BTSerial(){
+void readBtSerial(){
     // Communicate with remote Bluetooth device
 }   
 
-void update_var(/*string command*/){
+void updateVar(/*string command*/){
     // Update parameters based on Bluetooth command
 }

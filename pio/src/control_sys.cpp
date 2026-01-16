@@ -3,23 +3,23 @@
 /***************************************************************/
 
 // Motors previous position
-long mot1_prv_pos = 0;
-long mot2_prv_pos = 0;
+long mot1PrevPos = 0;
+long mot2PrevPos = 0;
 
 // Motor position and velocity measurement
 // mot1_pos, mot2_pos, (m1_vel, m2_vel)
-static int MOTptr_meas[2] = {0};
+static int motMeas[2] = {0};
 
 /***************************************************************/
 
 // Individual controller outputs
-static float POS_out = 0;     // Position control output
-static float BAL_out = 0;     // Balance control output
-static float HDG_out = 0;     // Heading control output
+static float posOut = 0;     // Position control output
+static float balOut = 0;     // Balance control output
+static float hdgOut = 0;     // Heading control output
 
 // Actuation signal array
 // mot1_spd, mot2_spd, mot1_dir, mot2_dir
-static int MOTptr_act[4] = {0};
+static int motAct[4] = {0};
 
 /***************************************************************/
 // PID state variables for each controller
@@ -39,17 +39,17 @@ static float hdg_integral = 0;        // Accumulated heading error
 
 /***************************************************************/
 // PID position controller - controls forward/backward movement setpoint
-float position_control(float *IMUptr, float *POSptr_param, bool printData){
+float positionControl(float *imuPtr, float *posParamPtr, bool printData){
     // IMUptr: roll, pitch, yaw, timestamp, elapsed_time (milliseconds)
     // POSptr_param: setPos, posKP, posKI, posKD
     
-    float dt = IMUptr[4] / 1000.0f;  // Convert ms to seconds
+    float dt = imuPtr[4] / 1000.0f;  // Convert ms to seconds
     if(dt <= 0) dt = 0.001f;          // Prevent division by zero
     
-    float setPos = POSptr_param[0];
-    float Kp = POSptr_param[1];
-    float Ki = POSptr_param[2];
-    float Kd = POSptr_param[3];
+    float setPos = posParamPtr[0];
+    float Kp = posParamPtr[1];
+    float Ki = posParamPtr[2];
+    float Kd = posParamPtr[3];
     
     // Position error (difference from setpoint)
     float pos_error = setPos - 0;  // setPos is velocity target (0 for balance point)
@@ -69,29 +69,29 @@ float position_control(float *IMUptr, float *POSptr_param, bool printData){
     pos_error_prev = pos_error;
     
     // Sum all terms
-    POS_out = pos_P + pos_I + pos_D;
+    posOut = pos_P + pos_I + pos_D;
     
-    return POS_out;
+    return posOut;
 }
 
 // PID balance controller - core stabilisation controller
-float balance_control(float *IMUptr, float *BALptr_param, float POS_out, bool printData){
+float balanceControl(float *imuPtr, float *balParamPtr, float posOut, bool printData){
     // IMUptr: roll, pitch, yaw, timestamp, elapsed_time
     // BALptr_param: setBal, balKP, balKI, balKD
     // POS_out: balance offset from position controller
     
-    float dt = IMUptr[4] / 1000.0f;  // Convert ms to seconds
+    float dt = imuPtr[4] / 1000.0f;  // Convert ms to seconds
     if(dt <= 0) dt = 0.001f;
     
-    float setBal = BALptr_param[0];
-    float Kp = BALptr_param[1];
-    float Ki = BALptr_param[2];
-    float Kd = BALptr_param[3];
+    float setBal = balParamPtr[0];
+    float Kp = balParamPtr[1];
+    float Ki = balParamPtr[2];
+    float Kd = balParamPtr[3];
     
     // Pitch angle is the balance error (want pitch near 0)
     // Add position offset to create forward/backward lean
-    float pitch = IMUptr[1];  // Current pitch angle
-    float bal_setpoint = setBal + POS_out;  // Add position adjustment
+    float pitch = imuPtr[1];  // Current pitch angle
+    float bal_setpoint = setBal + posOut;  // Add position adjustment
     float bal_error = bal_setpoint - pitch;
     
     // Proportional term
@@ -108,26 +108,26 @@ float balance_control(float *IMUptr, float *BALptr_param, float POS_out, bool pr
     bal_error_prev = bal_error;
     
     // Sum all terms
-    BAL_out = bal_P + bal_I + bal_D;
+    balOut = bal_P + bal_I + bal_D;
     
-    return BAL_out;
+    return balOut;
 }
 
 // PID heading controller - yaw/rotation control
-float heading_control(float *IMUptr, float *HDGptr_param, bool printData){
+float headingControl(float *imuPtr, float *hdgParamPtr, bool printData){
     // IMUptr: roll, pitch, yaw, timestamp, elapsed_time
     // HDGptr_param: setHdg, hdgKP, hdgKI, hdgKD
     
-    float dt = IMUptr[4] / 1000.0f;  // Convert ms to seconds
+    float dt = imuPtr[4] / 1000.0f;  // Convert ms to seconds
     if(dt <= 0) dt = 0.001f;
     
-    float setHdg = HDGptr_param[0];
-    float Kp = HDGptr_param[1];
-    float Ki = HDGptr_param[2];
-    float Kd = HDGptr_param[3];
+    float setHdg = hdgParamPtr[0];
+    float Kp = hdgParamPtr[1];
+    float Ki = hdgParamPtr[2];
+    float Kd = hdgParamPtr[3];
     
     // Heading error (difference from desired yaw)
-    float yaw = IMUptr[2];  // Current yaw angle
+    float yaw = imuPtr[2];  // Current yaw angle
     float hdg_error = setHdg - yaw;
     
     // Proportional term
@@ -144,13 +144,13 @@ float heading_control(float *IMUptr, float *HDGptr_param, bool printData){
     hdg_error_prev = hdg_error;
     
     // Sum all terms
-    HDG_out = hdg_P + hdg_I + hdg_D;
+    hdgOut = hdg_P + hdg_I + hdg_D;
     
-    return HDG_out;
+    return hdgOut;
 }
 
 // Combined cascade control system                                                              // Combined
-int *cascade_control(float *IMUptr, float BAL_out, float HDG_out, bool printData){
+int *cascadeControl(float *imuPtr, float balOut, float hdgOut, bool printData){
     // IMUptr: roll, pitch, yaw, timestamp, elapsed_time
     // BAL_out: balance controller output (pitch correction)
     // HDG_out: heading controller output (yaw correction)
@@ -160,95 +160,95 @@ int *cascade_control(float *IMUptr, float BAL_out, float HDG_out, bool printData
     // Balance output directly drives forward/backward
     // Heading output creates differential thrust for rotation
     
-    float mot1_vel_set = BAL_out - HDG_out;  // Left motor: balance minus turn correction
-    float mot2_vel_set = BAL_out + HDG_out;  // Right motor: balance plus turn correction
+    float mot1VelocitySet = balOut - hdgOut;  // Left motor: balance minus turn correction
+    float mot2VelocitySet = balOut + hdgOut;  // Right motor: balance plus turn correction
 
     // Motors travel since last cycle
-    int mot1_trv = MOTptr_meas[0] - mot1_prv_pos;    
-    int mot2_trv = MOTptr_meas[1] - mot2_prv_pos;    
+    int mot1Travel = motMeas[0] - mot1PrevPos;    
+    int mot2Travel = motMeas[1] - mot2PrevPos;    
 
     // Update previous position
-    mot1_prv_pos = MOTptr_meas[0];   
-    mot2_prv_pos = MOTptr_meas[1];
+    mot1PrevPos = motMeas[0];   
+    mot2PrevPos = motMeas[1];
 
     // Calculate velocity, arbitrary units
     // Prevent division by near-zero values for numerical stability
-    float timeScale = (IMUptr[4] > 1.0f) ? (IMUptr[4] / 5000.0f) : 0.0001f;
-    float mot1_vel_meas = (timeScale > 0) ? (mot1_trv / timeScale) : 0.0f;  
-    float mot2_vel_meas = (timeScale > 0) ? (mot2_trv / timeScale) : 0.0f;
+    float timeScale = (imuPtr[4] > 1.0f) ? (imuPtr[4] / 5000.0f) : 0.0001f;
+    float mot1VelocityMeas = (timeScale > 0) ? (mot1Travel / timeScale) : 0.0f;  
+    float mot2VelocityMeas = (timeScale > 0) ? (mot2Travel / timeScale) : 0.0f;
 
     // Simple proportional control for inner velocity loop
     // Calculate error signal
-    int mot1_error = mot1_vel_set - mot1_vel_meas;
-    int mot2_error = mot2_vel_set - mot2_vel_meas;
+    int mot1Error = mot1VelocitySet - mot1VelocityMeas;
+    int mot2Error = mot2VelocitySet - mot2VelocityMeas;
 
     // Calculate output velocity with proportional gain
-    int mot1_vel_out = mot1_error * 1;  // Velocity loop gain = 1 (can be tuned)
-    int mot2_vel_out = mot2_error * 1;
+    int mot1VelocityOut = mot1Error * 1;  // Velocity loop gain = 1 (can be tuned)
+    int mot2VelocityOut = mot2Error * 1;
 
     /************************************************************** */
 
     // Apply output clamping to PWM limits (0-255)
-    if(mot1_vel_out > 250) mot1_vel_out = 250;
-    else if(mot1_vel_out < -250) mot1_vel_out = -250;
-    if(mot2_vel_out > 250) mot2_vel_out = 250;
-    else if(mot2_vel_out < -250) mot2_vel_out = -250;
+    if(mot1VelocityOut > 250) mot1VelocityOut = 250;
+    else if(mot1VelocityOut < -250) mot1VelocityOut = -250;
+    if(mot2VelocityOut > 250) mot2VelocityOut = 250;
+    else if(mot2VelocityOut < -250) mot2VelocityOut = -250;
 
     // Set speed and direction from calculated velocity
     // mot1_spd, mot2_spd, mot1_dir, mot2_dir
     // Motor 1 reverse
-    if(mot1_vel_out < 0){
-        MOTptr_act[0] = -mot1_vel_out; 
-        MOTptr_act[2] = 1;
+    if(mot1VelocityOut < 0){
+        motAct[0] = -mot1VelocityOut; 
+        motAct[2] = 1;
     }
     // Motor 1 forward
     else{
-        MOTptr_act[0] = mot1_vel_out;
-        MOTptr_act[2] = 0;
+        motAct[0] = mot1VelocityOut;
+        motAct[2] = 0;
     }
     // Motor 2 reverse
-    if(mot2_vel_out < 0){
-        MOTptr_act[1] = -mot2_vel_out;
-        MOTptr_act[3] = 1;
+    if(mot2VelocityOut < 0){
+        motAct[1] = -mot2VelocityOut;
+        motAct[3] = 1;
     }
     // Motor 2 forward
     else{
-        MOTptr_act[1] = mot2_vel_out;
-        MOTptr_act[3] = 0;
+        motAct[1] = mot2VelocityOut;
+        motAct[3] = 0;
     }
 
     // Print variables used in calculation
     if(printData){
-        print_float("M1_meas:", &mot1_vel_meas, 0);  
-        print_int("M1_set:", (int*)&mot1_vel_set, 0);   
-        print_int("M1_out:", &mot1_vel_out, 0);
-        print_msg("");
-        print_float("M2_meas:", &mot2_vel_meas, 0);
-        print_int("M2_set:", (int*)&mot2_vel_set, 0);
-        print_int("M2_out:", &mot2_vel_out, 0);
-        print_msg("");
+        printFloat("M1_meas:", &mot1VelocityMeas, 0);  
+        printInt("M1_set:", (int*)&mot1VelocitySet, 0);   
+        printInt("M1_out:", &mot1VelocityOut, 0);
+        printMsg("");
+        printFloat("M2_meas:", &mot2VelocityMeas, 0);
+        printInt("M2_set:", (int*)&mot2VelocitySet, 0);
+        printInt("M2_out:", &mot2VelocityOut, 0);
+        printMsg("");
     }
     
-    return MOTptr_act;
+    return motAct;
 }
 
 // Motor 1 Interrupts
 void inc1(){
-    int ens1B = digitalRead(enp1B);
+    int ens1B = digitalRead(ENC1_B);
     if(ens1B > 0){
-        MOTptr_meas[0]--;
+        motMeas[0]--;
     }
     else{
-        MOTptr_meas[0]++;
+        motMeas[0]++;
     }
 }
 // Motor 2 Interrupts
 void inc2(){
-    int ens2B = digitalRead(enp2B);
+    int ens2B = digitalRead(ENC2_B);
     if(ens2B > 0){
-        MOTptr_meas[1]++;
+        motMeas[1]++;
     }
     else{
-        MOTptr_meas[1]--;
+        motMeas[1]--;
     }
 }

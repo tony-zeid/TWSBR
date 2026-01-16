@@ -6,9 +6,9 @@
     #include "messages.h"
 
     // Sets motor direction & PWM duty cycle
-    void run_motors(int *MOTptr);
+    void runMotors(int *motorActuationPtr);
 
     // Test function for motor diagnostics - spins each motor independently
-    void test_motors();
+    void testMotors();
 
 #endif
