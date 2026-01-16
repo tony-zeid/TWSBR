@@ -1,6 +1,7 @@
 #include "../include/command.h"
 #include "../include/messages.h"
 #include "../include/control_sys.h"
+#include <EEPROM.h>
 
 // runMode is defined in main.cpp
 extern uint8_t runMode;
@@ -161,3 +162,65 @@ void processSerialCommands(){
 float *getPosParam(){ return posControls; }
 float *getBalParam(){ return balControls; }
 float *getHdgParam(){ return hdgControls; }
+
+// EEPROM persistence (~54 bytes total)
+// Layout: runMode(1) | debugMode(1) | dataRatePerMode[2](4) | posControls[4](16) | balControls[4](16) | hdgControls[4](16)
+#define EEPROM_START_ADDR 0
+
+void saveParametersToEEPROM(){
+    uint16_t addr = EEPROM_START_ADDR;
+    
+    // Save runMode and debugMode
+    EEPROM.write(addr++, runMode);
+    EEPROM.write(addr++, debugMode);
+    
+    // Save dataRatePerMode[2]
+    for (int i = 0; i < 2; i++){
+        uint16_t val = dataRatePerMode[i];
+        EEPROM.write(addr++, (uint8_t)(val & 0xFF));
+        EEPROM.write(addr++, (uint8_t)((val >> 8) & 0xFF));
+    }
+    
+    // Save parameter arrays (3 arrays × 4 floats each)
+    float *arrays[3] = {posControls, balControls, hdgControls};
+    for (int a = 0; a < 3; a++){
+        for (int i = 0; i < 4; i++){
+            float fval = arrays[a][i];
+            uint8_t *bytes = (uint8_t *)&fval;
+            for (int j = 0; j < 4; j++){
+                EEPROM.write(addr++, bytes[j]);
+            }
+        }
+    }
+}
+
+void loadParametersFromEEPROM(){
+    uint16_t addr = EEPROM_START_ADDR;
+    
+    // Load runMode and debugMode
+    runMode = EEPROM.read(addr++);
+    debugMode = EEPROM.read(addr++);
+    
+    // Validate runMode and debugMode
+    if (runMode > 2) runMode = 2;
+    if (debugMode > 1) debugMode = 1;
+    
+    // Load dataRatePerMode[2]
+    for (int i = 0; i < 2; i++){
+        uint8_t lo = EEPROM.read(addr++);
+        uint8_t hi = EEPROM.read(addr++);
+        dataRatePerMode[i] = (uint16_t)(lo | (hi << 8));
+    }
+    
+    // Load parameter arrays
+    float *arrays[3] = {posControls, balControls, hdgControls};
+    for (int a = 0; a < 3; a++){
+        for (int i = 0; i < 4; i++){
+            uint8_t bytes[4];
+            for (int j = 0; j < 4; j++){
+                bytes[j] = EEPROM.read(addr++);
+            }
+            memcpy(&arrays[a][i], bytes, 4);
+        }
+    }
+}

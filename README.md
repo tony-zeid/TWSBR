@@ -169,6 +169,89 @@ Keep the robot completely still and level during initialisation. The measured er
 - Ensure power rails are stable; brown‑outs can cause runaway behaviour.
 - The motor driver outputs are clamped to 0–255 PWM; direction pins clear before switching for safety.
 
+## Tuning the Control Loops
+
+### Overview
+The robot uses a cascaded control structure: **Position** → **Balance** → **Motors**. Tuning follows a bottom‑up approach starting with balance (most critical), then position and heading.
+
+### Balance Loop (Critical)
+The balance loop corrects tilt (pitch) to keep the robot upright. **Start here first.**
+
+1. **Lift wheels off the ground** and hold robot level in your hand.
+2. Set `mode 1` (controllers run, but motors off) to test without movement.
+3. Switch to compact telemetry: `debug 0` and `rate 10` to see roll/pitch at 10‑cycle intervals.
+4. Start with very small Kp: `balkp 0.5`
+5. Tilt robot gently forward/backward and watch the IMU pitch value respond:
+   - Pitch should oscillate around zero as you release it (increasing Kp will dampen overshoot)
+   - Aim for slow decay without oscillation
+6. Increase Kp incrementally (e.g., 0.5 → 1.0 → 1.5 → 2.0) until you see stable response
+7. Once Kp is tuned, add small Ki to eliminate steady‑state error:
+   - Start with `balki 0.05` and increase if drift persists (e.g., 0.1, 0.15)
+8. Fine‑tune Kd if oscillations appear:
+   - `balkd 0.02` helps dampen high‑frequency noise from the IMU
+
+**Typical starting gains**: `balkp 2.0`, `balki 0.1`, `balkd 0.03`
+
+### Position Loop (Once Balance Works)
+Position loop maintains forward/backward centering. The balance loop naturally provides position feedback via roll change.
+
+1. Switch to `mode 2` with wheels still lifted (motor PWM will run but wheels won't turn much).
+2. Observe whether the robot tends to "creep" forward or backward in pitch.
+3. Adjust `poskp` (start ~0.5–1.0) and `poski` (~0.05) if systematic drift appears.
+4. Most robots need minimal position tuning if balance loop is good.
+
+### Heading Loop (Fine‑Tuning)
+Heading loop corrects yaw. Usually requires minimal tuning for forward motion.
+
+1. With the robot on a flat surface (wheels on ground), switch to `mode 2`.
+2. Watch yaw drift; if the robot consistently turns left/right, adjust `hdgkp` and `hdgki` slightly.
+3. Most setups work well with `hdgkp 1.0`, `hdgki 0.0`, `hdgkd 0.0`.
+
+### Practical Workflow
+```
+# 1. Start with balance loop (mode 1, no motor drive)
+debug 1
+mode 1
+balkp 1.0
+
+# 2. Switch to compact telemetry for faster feedback
+debug 0
+rate 10
+
+# 3. Adjust gains live (robot in hand, level)
+balkp 1.5
+balki 0.1
+balkd 0.02
+
+# 4. Once stable (in hand), try with wheels on ground
+mode 2
+
+# 5. Collect verbose data if tuning feels rough
+debug 1
+rate 100
+```
+
+### Monitoring Telemetry
+- **Compact mode** (`debug 0`): Three space‑separated floats per line: roll pitch yaw. Pipe to a file for post‑analysis.
+  ```bash
+  # Example: log data for 30 seconds at 19200 baud
+  cat /dev/ttyUSB0 > data.txt &
+  # ... run tuning commands ...
+  # Ctrl+C to stop
+  gnuplot -e "plot 'data.txt' u 2" # Plot pitch over time
+  ```
+- **Verbose mode** (`debug 1`): Full diagnostics; easier for real‑time observation but slower telemetry.
+
+### If Robot Oscillates or Diverges
+- **High‑frequency oscillation**: Reduce Kd or Kp; IMU noise may be coupling back.
+- **Low‑frequency / growing oscillation**: Reduce Ki; integral term may be accumulating too fast.
+- **Divergent (unstable)**: Cut all gains by half and restart. Check motor/encoder wiring.
+
+### If Robot Falls Sideways
+- Verify IMU calibration: run `mode 0` and confirm roll ≈ 0 when level.
+- Check that motors spin in the correct directions (balance loop commands opposite motors for correction).
+- Verify encoder counts are correct (see Troubleshooting).
+
 ## Troubleshooting
 - No serial output: check the monitor baud is 19200.
 - IMU values stuck or wild: verify SDA/SCL wiring and 5V↔3.3V compatibility of your module.

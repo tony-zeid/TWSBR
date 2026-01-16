@@ -33,7 +33,7 @@ uint8_t debugMode = 1;
 
 // Program counter and data output rates per debug mode
 int loopCount = 0;    // Increments on each loop
-uint16_t dataRatePerMode[2] = {500, 500};  // dataRatePerMode[debugMode]
+uint16_t dataRatePerMode[2] = {10, 500};  // dataRatePerMode[debugMode]
 #define dataRate (dataRatePerMode[debugMode])
 uint8_t printData = 0;
 

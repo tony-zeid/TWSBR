@@ -1,58 +1,76 @@
-# TWSBR Native Test Suite
+# TWSBR Test Suite
 
-This directory contains unit tests for the TWSBR firmware. Tests run on the native PC environment (not on the Arduino) using the Unity test framework.
+This directory contains tests for the TWSBR firmware.
 
-## Test Files
+## Test Organization
 
-- **test_command_parser.cpp**: Command parsing, mode changes, parameter updates, edge cases
-- **test_control_logic.cpp**: PID calculations, motor output clamping, control symmetry
-- **test_parameter_validation.cpp**: Bounds checking, realistic ranges, numerical stability
+All tests are in the `test/` folder with naming conventions:
+- **test_\*.cpp** — Native PC tests (command parsing, control math, validation)
+- **test_hw_\*.cpp** — Arduino Uno hardware tests (EEPROM, motors, encoders, IMU)
+- **test_support.\*** — Shared test infrastructure for native tests
 
 ## Running Tests
 
-### All tests
-```bash
-platformio test -e native
-```
-
-### Specific test file
-```bash
-platformio test -e native -f test_command_parser
-```
-
-### With verbose output
+### Native tests only (PC)
 ```bash
 platformio test -e native -v
 ```
 
-## Test Coverage
+### Hardware tests only (requires Arduino Uno)
+```bash
+platformio test -e uno -v
+```
 
-### Command Parser Tests (~35 tests)
-- Mode transitions (valid 0, 1, 2; invalid inputs)
-- Debug mode switching
-- Telemetry rate setting per mode
-- PID parameter updates (all 12 gains + setpoints)
-- Status command
-- Error handling (unknown commands, malformed input, whitespace)
-- Case insensitivity
-- Parameter bounds (zero, negative, very large values)
+### Specific test
+```bash
+platformio test -e uno -f test_hw_motors -v
+platformio test -e native -f test_command -v
+```
 
-### Control Logic Tests (~20 tests)
-- Proportional response to pitch/position errors
-- Integral accumulation over time
-- Derivative damping on rapid changes
-- Motor output clamping (0–255 PWM range)
-- Control sensitivity (Kp scaling)
-- Symmetry (+ and − errors produce opposite outputs)
+## Native Test Suite
 
-### Parameter Validation Tests (~30 tests)
-- PID gain ranges (realistic tuning space)
-- Setpoint bounds (position, balance, heading)
-- IMU measurement ranges (roll, pitch, yaw)
-- Telemetry rate bounds
-- Motor PWM and direction pin ranges
-- Mode/state bounds
-- Numerical stability (no NaN/Inf)
+Tests for command parsing, control logic, and parameter validation—run on PC without hardware.
+
+### Test Files
+
+- **test_command.cpp** — command parsing, mode changes, parameter updates
+- **test_control.cpp** — PID math, motor clamping, numerical stability
+- **test_validation.cpp** — bounds checking, realistic ranges
+- **test_runner.cpp** — unified test entry point with setUp/tearDown
+- **test_support.h/cpp** — shared mocks and helpers (Arduino types, String, command logic)
+
+### Coverage
+
+- **Command Parser** (~12 tests): mode, debug, rate, PID parameter updates, error handling
+- **Control Logic** (~8 tests): proportional/integral/derivative response, motor output clamping
+- **Parameter Validation** (~5 tests): gain ranges, setpoint bounds, mode validity
+
+## Uno Test Suite
+
+Tests for hardware integration and EEPROM persistence—run on Arduino Uno.
+
+### Test Files
+
+- **test_hw_eeprom.cpp** — EEPROM save/load, parameter persistence, validation
+- **test_hw_motors.cpp** — motor control, PWM, direction, simultaneous drive
+- **test_hw_encoders.cpp** — encoder pin initialization, state reading
+- **test_hw_imu.cpp** — IMU initialization, sensitivity config, error calibration
+
+### Coverage
+
+- **EEPROM** (~11 tests): save/load runMode/debugMode/dataRate/PID gains, corruption recovery, roundtrip
+- **Motors** (~7 tests): forward/backward, PWM range, simultaneous drive, stop
+- **Encoders** (~2 tests): pin initialization, state reading
+- **IMU** (~5 tests): initialization, sensitivity config, error calibration, data bounds
+
+### Calibration
+
+See [CALIBRATION.md](CALIBRATION.md) for comprehensive hardware calibration procedures:
+- **IMU calibration**: level placement, error bounds, troubleshooting
+- **Encoder calibration**: direction verification, pin testing
+- **Motor direction**: balance verification, reversal procedures
+- **PID tuning**: balance loop, position loop, heading loop
+- **Verification**: hardware tests, soak testing
 
 ## Future Additions (ideas)
 - Hardware smoke on `env:uno`: build/link and a tiny runtime check that default `runMode`/`debugMode` are sane.

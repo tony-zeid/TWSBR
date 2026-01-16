@@ -17,4 +17,8 @@ float *getPosParam();
 float *getBalParam();
 float *getHdgParam();
 
+// EEPROM save/load for persistence
+void saveParametersToEEPROM();
+void loadParametersFromEEPROM();
+
 #endif
